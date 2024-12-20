@@ -81,6 +81,7 @@ resource "aws_instance" "master" {
   instance_type = "t2.medium"
   subnet_id     = aws_subnet.private[count.index].id
   security_groups = [aws_security_group.open_all.id]
+  private_ip    = var.master_ips[count.index]
   user_data = file("preconfig.sh")
   tags = {
     Name = "master-node-${count.index + 1}"
@@ -93,6 +94,7 @@ resource "aws_instance" "worker" {
   instance_type = "t2.medium"
   subnet_id     = aws_subnet.private[count.index].id
   security_groups = [aws_security_group.open_all.id]
+  private_ip    = var.worker_ips[count.index]
   user_data = file("preconfig.sh")
   tags = {
     Name = "worker-node-${count.index + 1}"
@@ -119,9 +121,21 @@ resource "aws_instance" "Ansible" {
   subnet_id     = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.open_all.id]
   key_name = data.aws_key_pair.keypair.key_name
+  provisioner "file" {
+    source      = "${path.module}/generated/config.yml"         
+    destination = "/home/ubuntu/config.yml"   
+    connection {
+      type        = "ssh"
+      host        = self.public_ip              # Use self.private_ip if within private subnet
+      user        = "ubuntu"                  # Replace with the appropriate username
+      private_key = file("~/.ssh/anhtuan.pem") # Path to your private key
+    }
+  }
+  user_data = file("../ansible/install.sh")
   tags = {
     Name = "Ansible"
   }
+  depends_on = [aws_lb.nlb, local_file.config_yaml]
 }
 
 resource "aws_lb" "nlb" {
@@ -196,6 +210,13 @@ resource "aws_route_table_association" "private" {
   count          = 3
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
+}
+
+resource "local_file" "config_yaml" {
+  content = templatefile("${path.module}/config.yml.template", {
+    nlb_domain = aws_lb.nlb.dns_name
+  })
+  filename = "${path.module}/generated/config.yml"
 }
 
 output "vpc_id" {
