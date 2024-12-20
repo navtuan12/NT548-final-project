@@ -7,3 +7,5 @@ sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ss
 sudo sed -i 's/^Include/#Include/' /etc/ssh/sshd_config
 
 sudo systemctl restart ssh
+
+echo "ubuntu:123" | sudo chpasswd

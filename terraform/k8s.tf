@@ -99,15 +99,28 @@ resource "aws_instance" "worker" {
   }
 }
 
-resource "aws_instance" "public_k8s" {
-  count         = 2
+resource "aws_instance" "Harbor" {
+  count         = 1
+  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
+  instance_type = "t2.medium"
+  subnet_id     = aws_subnet.public[count.index].id
+  security_groups = [aws_security_group.open_all.id]
+  key_name = data.aws_key_pair.keypair.key_name
+  user_data = file("../harbor/install.sh")
+  tags = {
+    Name = "Harbor"
+  }
+}
+
+resource "aws_instance" "Ansible" {
+  count         = 1
   ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
   instance_type = "t2.medium"
   subnet_id     = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.open_all.id]
   key_name = data.aws_key_pair.keypair.key_name
   tags = {
-    Name = "public-k8s-node-${count.index + 1}"
+    Name = "Ansible"
   }
 }
 
@@ -211,14 +224,6 @@ output "master_instance_ids" {
 
 output "worker_instance_ids" {
   value = aws_instance.worker[*].id
-}
-
-output "public_k8s_instance_ids" {
-  value = aws_instance.public_k8s[*].id
-}
-
-output "public_k8s_public_ips" {
-  value = aws_instance.public_k8s[*].public_ip
 }
 
 output "load_balancer_dns" {
