@@ -1,4 +1,3 @@
-
 provider "aws" {
   region = "us-east-1"
 }
@@ -7,10 +6,13 @@ terraform {
   backend "s3" {
     bucket = "nt548-tf-state"
     key    = "vpc/nlb/terraform.tfstate"
-    region = "us-east-1"  # Update this to match the region of your S3 bucket
+    region = "us-east-1"
   }
 }
 
+data "aws_key_pair" "keypair" {
+  key_name = "anhtuan"  # Replace with your existing key name in AWS
+}
 
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -52,6 +54,13 @@ resource "aws_security_group" "open_all" {
   vpc_id = aws_vpc.main.id
 
   ingress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
@@ -68,23 +77,37 @@ resource "aws_security_group" "open_all" {
 
 resource "aws_instance" "master" {
   count         = 3
-  ami = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
+  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
   instance_type = "t2.medium"
   subnet_id     = aws_subnet.private[count.index].id
   security_groups = [aws_security_group.open_all.id]
+  user_data = file("preconfig.sh")
   tags = {
     Name = "master-node-${count.index + 1}"
   }
 }
 
 resource "aws_instance" "worker" {
-  count = 3
-  ami = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
+  count         = 3
+  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
   instance_type = "t2.medium"
   subnet_id     = aws_subnet.private[count.index].id
   security_groups = [aws_security_group.open_all.id]
+  user_data = file("preconfig.sh")
   tags = {
     Name = "worker-node-${count.index + 1}"
+  }
+}
+
+resource "aws_instance" "public_k8s" {
+  count         = 2
+  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
+  instance_type = "t2.medium"
+  subnet_id     = aws_subnet.public[count.index].id
+  security_groups = [aws_security_group.open_all.id]
+  key_name = data.aws_key_pair.keypair.key_name
+  tags = {
+    Name = "public-k8s-node-${count.index + 1}"
   }
 }
 
@@ -92,6 +115,7 @@ resource "aws_lb" "nlb" {
   name               = "nlb"
   internal           = false
   load_balancer_type = "network"
+  security_groups    = [aws_security_group.open_all.id]
   subnet_mapping {
     subnet_id = aws_subnet.public[0].id
   }
@@ -189,6 +213,14 @@ output "worker_instance_ids" {
   value = aws_instance.worker[*].id
 }
 
+output "public_k8s_instance_ids" {
+  value = aws_instance.public_k8s[*].id
+}
+
+output "public_k8s_public_ips" {
+  value = aws_instance.public_k8s[*].public_ip
+}
+
 output "load_balancer_dns" {
   value = aws_lb.nlb.dns_name
 }
@@ -196,3 +228,4 @@ output "load_balancer_dns" {
 output "target_group_arn" {
   value = aws_lb_target_group.tg.arn
 }
+
