@@ -1,0 +1,3 @@
+- ***CI/CD Database Migration***: https://appmaster.io/glossary/ci-cd-database-migration
+- ***K8s HA using Haproxy and Keepalived***: https://kifarunix.com/setup-highly-available-kubernetes-cluster-with-haproxy-and-keepalived/
+- ***K8s HA on AWS using NLB***: https://www.kubesphere.io/blogs/aws-kubernetes/ 
