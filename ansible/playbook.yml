@@ -15,3 +15,16 @@
       apt:
         name: conntrack
         state: present
+
+- name: Install KubeKey on master1
+  hosts: master1
+  become: yes
+  tasks:
+    - name: Download and install KubeKey
+      shell: curl -sfL https://get-kk.kubesphere.io | VERSION=v3.1.7 sh -
+      args:
+        chdir: /home/ubuntu
+    - name: Create cluster with KubeKey
+      shell: ./kk create cluster -f /home/ubuntu/config.yml
+      args:
+        chdir: /home/ubuntu

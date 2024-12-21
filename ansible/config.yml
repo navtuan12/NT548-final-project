@@ -26,7 +26,7 @@ spec:
   controlPlaneEndpoint:
     ## Internal loadbalancer for apiservers 
     # internalLoadbalancer: haproxy
-    domain: ${nlb_domain}
+    domain: nlb-897015cf27c2f290.elb.us-east-1.amazonaws.com
     port: 6443
   kubernetes:
     version: v3.0.6

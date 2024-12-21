@@ -17,7 +17,17 @@ variable "private_subnet_cidrs" {
   ]
 }
 
+
+variable "public_subnet_cidrs" {
+  type = list(string)
+  default = [
+    "10.0.4.0/24", 
+    "10.0.5.0/24", 
+    "10.0.6.0/24"
+  ]
+}
+
 variable "key_pair" {
   type = string
-  default = "path-to-key-pair"
+  default = "~/.ssh/anhtuan.pem"
 }

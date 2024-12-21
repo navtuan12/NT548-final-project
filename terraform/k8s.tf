@@ -36,7 +36,7 @@ resource "aws_eip" "nat" {
 resource "aws_subnet" "public" {
   count                  = 3
   vpc_id                 = aws_vpc.main.id
-  cidr_block             = cidrsubnet(aws_vpc.main.cidr_block, 3, count.index)
+  cidr_block             = var.public_subnet_cidrs[count.index]
   map_public_ip_on_launch = true
   availability_zone      = data.aws_availability_zones.available.names[count.index]
 }
@@ -44,7 +44,7 @@ resource "aws_subnet" "public" {
 resource "aws_subnet" "private" {
   count                  = 3
   vpc_id                 = aws_vpc.main.id
-  cidr_block             = cidrsubnet(aws_vpc.main.cidr_block, 3, count.index + 3)
+  cidr_block             = var.private_subnet_cidrs[count.index]
   availability_zone      = data.aws_availability_zones.available.names[count.index]
 }
 
@@ -114,6 +114,11 @@ resource "aws_instance" "Harbor" {
   }
 }
 
+resource "aws_eip_association" "Harbor_eip_association" {
+  instance_id   = aws_instance.Harbor[0].id
+  allocation_id = "eipalloc-0a056829a033c1102" # Replace with your existing EIP allocation ID
+}
+
 resource "aws_instance" "Ansible" {
   count         = 1
   ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
@@ -122,13 +127,13 @@ resource "aws_instance" "Ansible" {
   security_groups = [aws_security_group.open_all.id]
   key_name = data.aws_key_pair.keypair.key_name
   provisioner "file" {
-    source      = "${path.module}/generated/config.yml"         
-    destination = "/home/ubuntu/config.yml"   
+    source      = "${path.module}/../ansible/"         
+    destination = "/home/ubuntu/"   
     connection {
       type        = "ssh"
       host        = self.public_ip  
       user        = "ubuntu"
-      private_key = file(${var.key_pair})
+      private_key = file("${var.key_pair}")
     }
   }
   user_data = file("${path.module}/../ansible/install.sh")
@@ -199,17 +204,16 @@ resource "aws_route_table" "private" {
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 }
+resource "aws_route_table_association" "private" {
+  count          = 3
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
 
 resource "aws_route_table_association" "public" {
   count          = 3
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "private" {
-  count          = 3
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
 }
 
 resource "local_file" "config_yaml" {
