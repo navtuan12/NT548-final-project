@@ -16,3 +16,8 @@ variable "private_subnet_cidrs" {
     "10.0.3.0/24"
   ]
 }
+
+variable "key_pair" {
+  type = string
+  default = "path-to-key-pair"
+}

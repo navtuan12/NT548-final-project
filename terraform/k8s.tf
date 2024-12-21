@@ -108,7 +108,7 @@ resource "aws_instance" "Harbor" {
   subnet_id     = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.open_all.id]
   key_name = data.aws_key_pair.keypair.key_name
-  user_data = file("../harbor/install.sh")
+  user_data = file("${path.module}/../harbor/install.sh")
   tags = {
     Name = "Harbor"
   }
@@ -126,12 +126,12 @@ resource "aws_instance" "Ansible" {
     destination = "/home/ubuntu/config.yml"   
     connection {
       type        = "ssh"
-      host        = self.public_ip              # Use self.private_ip if within private subnet
-      user        = "ubuntu"                  # Replace with the appropriate username
-      private_key = file("~/.ssh/anhtuan.pem") # Path to your private key
+      host        = self.public_ip  
+      user        = "ubuntu"
+      private_key = file(${var.key_pair})
     }
   }
-  user_data = file("../ansible/install.sh")
+  user_data = file("${path.module}/../ansible/install.sh")
   tags = {
     Name = "Ansible"
   }
@@ -216,7 +216,7 @@ resource "local_file" "config_yaml" {
   content = templatefile("${path.module}/config.yml.template", {
     nlb_domain = aws_lb.nlb.dns_name
   })
-  filename = "${path.module}/generated/config.yml"
+  filename = "${path.module}/../ansible/config.yml"
 }
 
 output "vpc_id" {

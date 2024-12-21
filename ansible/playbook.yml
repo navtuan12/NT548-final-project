@@ -1,0 +1,17 @@
+- name: Install socat and conntrack on all machines
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install socat
+      apt:
+        name: socat
+        state: present
+
+    - name: Install conntrack
+      apt:
+        name: conntrack
+        state: present

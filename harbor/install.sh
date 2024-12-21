@@ -16,9 +16,9 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 wget https://github.com/goharbor/harbor/releases/download/v2.11.2/harbor-online-installer-v2.11.2.tgz
 tar -xvzf harbor-online-installer-v2.11.2.tgz
 
-export EMAIL=anhtuan.mmt@gmail.com
-export DOMAIN=registry.devnoneknow.online
-export HARBOR_PASSWORD=nt548@harbor
+export EMAIL=<email>
+export DOMAIN=<domain>
+export HARBOR_PASSWORD=<password>
 
 cd harbor/
 cp harbor.yml.tmpl harbor.yml
