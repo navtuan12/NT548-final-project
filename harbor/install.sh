@@ -17,7 +17,7 @@ wget https://github.com/goharbor/harbor/releases/download/v2.11.2/harbor-online-
 tar -xvzf harbor-online-installer-v2.11.2.tgz
 
 export EMAIL=anhtuan.mmt@gmail.com
-export DOMAIN=reg.devnoneknow.online
+export DOMAIN=registry.devnoneknow.online
 export HARBOR_PASSWORD=nt548@harbor
 
 cd harbor/
