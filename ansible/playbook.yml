@@ -25,6 +25,6 @@
       args:
         chdir: /home/ubuntu
     - name: Create cluster with KubeKey
-      shell: ./kk create cluster -f /home/ubuntu/config.yml
+      shell: echo 'yes' | sudo ./kk create cluster -f /home/ubuntu/config.yml
       args:
         chdir: /home/ubuntu

@@ -17,7 +17,6 @@ variable "private_subnet_cidrs" {
   ]
 }
 
-
 variable "public_subnet_cidrs" {
   type = list(string)
   default = [

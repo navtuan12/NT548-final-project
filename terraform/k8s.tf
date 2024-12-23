@@ -86,6 +86,10 @@ resource "aws_instance" "master" {
   tags = {
     Name = "master-node-${count.index + 1}"
   }
+  root_block_device {
+    volume_size = 30 # Size in GB
+    volume_type = "gp2" # General Purpose SSD
+  }
 }
 
 resource "aws_instance" "worker" {
@@ -99,18 +103,26 @@ resource "aws_instance" "worker" {
   tags = {
     Name = "worker-node-${count.index + 1}"
   }
+  root_block_device {
+    volume_size = 30 # Size in GB
+    volume_type = "gp2" # General Purpose SSD
+  }
 }
 
 resource "aws_instance" "Harbor" {
   count         = 1
   ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
-  instance_type = "t2.medium"
+  instance_type = "t2.large"
   subnet_id     = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.open_all.id]
   key_name = data.aws_key_pair.keypair.key_name
   user_data = file("${path.module}/../harbor/install.sh")
   tags = {
     Name = "Harbor"
+  }
+  root_block_device {
+    volume_size = 30 # Size in GB
+    volume_type = "gp2" # General Purpose SSD
   }
 }
 
@@ -136,11 +148,28 @@ resource "aws_instance" "Ansible" {
       private_key = file("${var.key_pair}")
     }
   }
-  user_data = file("${path.module}/../ansible/install.sh")
+  #user_data = file("${path.module}/../ansible/install.sh")
+  user_data = <<-EOF
+            #!/bin/bash
+            cat << 'EOT' > /tmp/install.sh
+            #!/bin/bash
+            while [ ! -f /home/ubuntu/install.sh ]; do
+              sleep 5
+            done
+            chmod +x /home/ubuntu/install.sh
+            /home/ubuntu/install.sh
+            EOT
+            chmod +x /tmp/install.sh
+            /tmp/install.sh
+            EOF
+  depends_on = [aws_lb.nlb, local_file.config_yaml, aws_instance.master, aws_instance.worker]
   tags = {
     Name = "Ansible"
   }
-  depends_on = [aws_lb.nlb, local_file.config_yaml]
+  root_block_device {
+    volume_size = 30 # Size in GB
+    volume_type = "gp2" # General Purpose SSD
+  }
 }
 
 resource "aws_lb" "nlb" {
@@ -185,6 +214,62 @@ resource "aws_lb_listener" "listener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.tg.arn
   }
+}
+
+resource "aws_lb_target_group" "tg_http" {
+  name        = "tg-http"
+  port        = 30080
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  health_check {
+    protocol = "TCP"
+    port     = 30080
+  }
+}
+
+resource "aws_lb_target_group" "tg_https" {
+  name        = "tg-https"
+  port        = 30443
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  health_check {
+    protocol = "TCP"
+    port     = 30443
+  }
+}
+
+resource "aws_lb_listener" "listener_http" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 80
+  protocol          = "TCP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg_http.arn
+  }
+}
+
+resource "aws_lb_listener" "listener_https" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 443
+  protocol          = "TCP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg_https.arn
+  }
+}
+
+resource "aws_lb_target_group_attachment" "tg_attachment_http" {
+  count            = 3
+  target_group_arn = aws_lb_target_group.tg_http.arn
+  target_id        = aws_instance.worker[count.index].id
+  port             = 30080
+}
+
+resource "aws_lb_target_group_attachment" "tg_attachment_https" {
+  count            = 3
+  target_group_arn = aws_lb_target_group.tg_https.arn
+  target_id        = aws_instance.worker[count.index].id
+  port             = 30443
 }
 
 resource "aws_route_table" "public" {

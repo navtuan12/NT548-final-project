@@ -18,7 +18,7 @@ tar -xvzf harbor-online-installer-v2.11.2.tgz
 
 export EMAIL=anhtuan.mmt@gmail.com
 export DOMAIN=reg.devnoneknow.online
-export PASSWORD=nt548@harbor
+export HARBOR_PASSWORD=nt548@harbor
 
 cd harbor/
 cp harbor.yml.tmpl harbor.yml
@@ -26,7 +26,7 @@ cp harbor.yml.tmpl harbor.yml
 sudo certbot certonly --agree-tos --email $EMAIL -d $DOMAIN --non-interactive --standalone
 
 sed -i "s|hostname: reg.mydomain.com|hostname: $DOMAIN|" harbor.yml
-sed -i "s|harbor_admin_password: .*|harbor_admin_password: $PASSWORD|" harbor.yml
+sed -i "s|harbor_admin_password: .*|harbor_admin_password: $HARBOR_PASSWORD|" harbor.yml
 sed -i "s|certificate: /your/certificate/path|certificate: /etc/letsencrypt/live/$DOMAIN/fullchain.pem|" harbor.yml
 sed -i "s|private_key: /your/private/key/path|private_key: /etc/letsencrypt/live/$DOMAIN/privkey.pem|" harbor.yml
 
