@@ -233,10 +233,10 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "local_file" "config_yaml" {
-  content = templatefile("${path.module}/00-init-playbook.yml.template", {
+  content = templatefile("${path.module}/01-join-node-playbook.yml.template", {
     nlb_domain = aws_lb.nlb.dns_name
   })
-  filename = "${path.module}/../ansible/00-init-playbook.yml"
+  filename = "${path.module}/../ansible/01-join-node-playbook.yml"
 }
 
 output "vpc_id" {
