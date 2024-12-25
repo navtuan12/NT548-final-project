@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: mongodb
   namespace: main-application
@@ -8,7 +8,6 @@ spec:
   selector:
     matchLabels:
       app: mongodb
-  serviceName: "mongodb" # Headless service name
   template:
     metadata:
       labels:
@@ -22,11 +21,7 @@ spec:
         volumeMounts:
         - mountPath: /data/db
           name: mongo-storage
-  volumeClaimTemplates:
-  - metadata:
-      name: mongo-storage
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi # Adjust size as needed
+      volumes:
+      - name: mongo-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc

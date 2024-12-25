@@ -5,10 +5,9 @@ metadata:
   namespace: main-application
 spec:
   selector:
-    app: backend
-    tier: backend
+      app: backend
   ports:
     - protocol: TCP
-      port: 8080
-      targetPort: 8080
+      port: 8800
+      targetPort: 8800
   type: ClusterIP

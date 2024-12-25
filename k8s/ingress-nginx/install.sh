@@ -1,6 +1,5 @@
 #!/bin/bash
-
-helm upgrade --install myingress ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
 kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{
   "spec": {
     "type": "NodePort",
@@ -24,3 +23,5 @@ kubectl patch deploy ingress-nginx-controller -n ingress-nginx -p '{
     "replicas": 3
   }
 }'
+
+kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission -n ingress-nginx

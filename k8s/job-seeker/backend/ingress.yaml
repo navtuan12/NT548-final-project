@@ -5,6 +5,7 @@ metadata:
   namespace: main-application
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:
@@ -17,4 +18,4 @@ spec:
               service:
                 name: backend
                 port:
-                  number: 8080
+                  number: 8800

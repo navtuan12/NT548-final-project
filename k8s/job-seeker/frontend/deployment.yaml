@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: noneknow12/job-seeker-client:v12
+          image: reg.devnoneknow.online/jobseeker/job-seeker-client:5
           ports:
             - containerPort: 80

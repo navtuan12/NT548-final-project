@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: backend
   namespace: main-application
+  labels:
+    app: backend
 spec:
   selector:
     matchLabels:
@@ -12,13 +14,12 @@ spec:
     metadata:
       labels:
         app: backend
-        tier: backend
     spec:
       containers:
         - name: backend
-          image: registry.devnoneknow.online/jobseeker/job-seeker-client:4
+          image: reg.devnoneknow.online/jobseeker/job-seeker-server:6
           ports:
-            - containerPort: 8080
+            - containerPort: 8800
           env:
             - name: MONGO_URI
               valueFrom:
