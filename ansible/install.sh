@@ -9,5 +9,5 @@ source ansible/bin/activate
 sudo apt install ansible-core -y
 export ANSIBLE_HOST_KEY_CHECKING=False
 
-sshpass -p "123" scp config.yml ubuntu@10.0.1.10:/home/ubuntu/
-ansible-playbook -i inventory.ini playbook.yml
+ansible-playbook -i inventory.ini 00-init-playbook.yml
+ansible-playbook -i inventory.ini 01-join-node-playbook.yml

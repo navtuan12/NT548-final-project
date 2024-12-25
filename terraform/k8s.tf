@@ -148,7 +148,7 @@ resource "aws_instance" "Ansible" {
       private_key = file("${var.key_pair}")
     }
   }
-  #user_data = file("${path.module}/../ansible/install.sh")
+  user_data = file("${path.module}/../ansible/install.sh")
   depends_on = [aws_lb.nlb, local_file.config_yaml, aws_instance.master, aws_instance.worker]
   tags = {
     Name = "Ansible"
@@ -203,62 +203,6 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
-resource "aws_lb_target_group" "tg_http" {
-  name        = "tg-http"
-  port        = 30080
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  health_check {
-    protocol = "TCP"
-    port     = 30080
-  }
-}
-
-resource "aws_lb_target_group" "tg_https" {
-  name        = "tg-https"
-  port        = 30443
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  health_check {
-    protocol = "TCP"
-    port     = 30443
-  }
-}
-
-resource "aws_lb_listener" "listener_http" {
-  load_balancer_arn = aws_lb.nlb.arn
-  port              = 80
-  protocol          = "TCP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_http.arn
-  }
-}
-
-resource "aws_lb_listener" "listener_https" {
-  load_balancer_arn = aws_lb.nlb.arn
-  port              = 443
-  protocol          = "TCP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_https.arn
-  }
-}
-
-resource "aws_lb_target_group_attachment" "tg_attachment_http" {
-  count            = 3
-  target_group_arn = aws_lb_target_group.tg_http.arn
-  target_id        = aws_instance.worker[count.index].id
-  port             = 30080
-}
-
-resource "aws_lb_target_group_attachment" "tg_attachment_https" {
-  count            = 3
-  target_group_arn = aws_lb_target_group.tg_https.arn
-  target_id        = aws_instance.worker[count.index].id
-  port             = 30443
-}
-
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -289,10 +233,10 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "local_file" "config_yaml" {
-  content = templatefile("${path.module}/config.yml.template", {
+  content = templatefile("${path.module}/00-init-playbook.yml.template", {
     nlb_domain = aws_lb.nlb.dns_name
   })
-  filename = "${path.module}/../ansible/config.yml"
+  filename = "${path.module}/../ansible/00-init-playbook.yml"
 }
 
 output "vpc_id" {

@@ -1,0 +1,52 @@
+- name: Initialize Kubernetes master
+  hosts: master1
+  become: yes
+  tasks:
+    - name: Initialize Kubernetes cluster
+      command: kubeadm init --control-plane-endpoint={{ nlb_domain }}
+      register: kubeadm_init_output
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Extract kubeadm join command
+      shell: |
+        echo "{{ kubeadm_init_output.stdout }}" | grep -A 2 "kubeadm join" | tail -n 3
+      register: kubeadm_join_command
+
+    - name: Save kubeadm join command for master nodes
+      copy:
+        content: "{{ kubeadm_join_command.stdout_lines[0] }}"
+        dest: /home/ubuntu/kubeadm_join_command_master.sh
+        mode: '0755'
+
+    - name: Save kubeadm join command for worker nodes
+      copy:
+        content: "{{ kubeadm_join_command.stdout_lines[1] }}"
+        dest: /home/ubuntu/kubeadm_join_command_worker.sh
+        mode: '0755'
+
+- name: Join master nodes to Kubernetes cluster
+  hosts: master2,master3
+  become: yes
+  tasks:
+    - name: Copy kubeadm join command script from master1
+      fetch:
+        src: /home/ubuntu/kubeadm_join_command_master.sh
+        dest: /tmp/kubeadm_join_command_master.sh
+        flat: yes
+
+    - name: Run kubeadm join command for master nodes
+      command: sh /tmp/kubeadm_join_command_master.sh
+
+- name: Join worker nodes to Kubernetes cluster
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Copy kubeadm join command script from master1
+      fetch:
+        src: /home/ubuntu/kubeadm_join_command_worker.sh
+        dest: /tmp/kubeadm_join_command_worker.sh
+        flat: yes
+
+    - name: Run kubeadm join command for worker nodes
+      command: sh /tmp/kubeadm_join_command_worker.sh
