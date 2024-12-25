@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: registry.devnoneknow.online/nt548jenkins/job-seeker-server@sha256:251c8352e612a190d98c9f1aa20e04d1cce58a42621de1b477174a338348b177
+          image: registry.devnoneknow.online/jobseeker/job-seeker-client:4
           ports:
             - containerPort: 8080
           env:

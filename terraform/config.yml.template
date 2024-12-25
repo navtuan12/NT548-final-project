@@ -35,10 +35,10 @@ spec:
     containerManager: containerd
   etcd:
     type: kubekey
-  #network:
-    #plugin: cilium
-    #kubePodsCIDR: 10.233.64.0/18
-    #kubeServiceCIDR: 10.233.0.0/18
+  network:
+    plugin: calico
+    kubePodsCIDR: 10.233.64.0/18
+    kubeServiceCIDR: 10.233.0.0/18
     ## multus support. https://github.com/k8snetworkplumbingwg/multus-cni
     #multusCNI:
     #  enabled: false

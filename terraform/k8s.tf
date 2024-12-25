@@ -75,45 +75,16 @@ resource "aws_security_group" "open_all" {
   }
 }
 
-resource "aws_instance" "master1" {
-  ami           = "ami-0e2c8caa4b6378d8c"
-  instance_type = "t2.medium"
-  subnet_id     = aws_subnet.private[0].id
-  security_groups = [aws_security_group.open_all.id]
-  private_ip    = var.master_ips[0]
-  user_data     = file("preconfig.sh")
-  tags = {
-    Name = "master-node-1"
-  }
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp2"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/../ansible/config.yml"
-    destination = "/home/ubuntu/config.yml"
-    connection {
-      type     = "ssh"
-      host     = self.public_ip
-      user     = "ubuntu"
-      password = "123"
-    }
-  }
-
-  depends_on = [local_file.config_yaml]
-}
-
 resource "aws_instance" "master" {
-  count         = 2
+  count         = 3
   ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
   instance_type = "t2.medium"
-  subnet_id     = aws_subnet.private[count.index + 1].id
+  subnet_id     = aws_subnet.private[count.index].id
   security_groups = [aws_security_group.open_all.id]
-  private_ip    = var.master_ips[count.index + 1]
+  private_ip    = var.master_ips[count.index]
   user_data = file("preconfig.sh")
   tags = {
-    Name = "master-node-${count.index + 2}"
+    Name = "master-node-${count.index + 1}"
   }
   root_block_device {
     volume_size = 30 # Size in GB
@@ -178,19 +149,6 @@ resource "aws_instance" "Ansible" {
     }
   }
   #user_data = file("${path.module}/../ansible/install.sh")
-  user_data = <<-EOF
-            #!/bin/bash
-            cat << 'EOT' > /tmp/install.sh
-            #!/bin/bash
-            while [ ! -f /home/ubuntu/install.sh ]; do
-              sleep 5
-            done
-            chmod +x /home/ubuntu/install.sh
-            /home/ubuntu/install.sh
-            EOT
-            chmod +x /tmp/install.sh
-            /tmp/install.sh
-            EOF
   depends_on = [aws_lb.nlb, local_file.config_yaml, aws_instance.master, aws_instance.worker]
   tags = {
     Name = "Ansible"
@@ -228,19 +186,10 @@ resource "aws_lb_target_group" "tg" {
   }
 }
 
-locals {
-  master1_id = [
-    # Single "master1"
-    aws_instance.master1.id
-  ]
-  # Extend array with the two from "master"
-  all_master_ids = concat(local.master1_id, aws_instance.master[*].id)
-}
-
 resource "aws_lb_target_group_attachment" "master" {
   count            = 3
   target_group_arn = aws_lb_target_group.tg.arn
-  target_id        = local.all_master_ids[count.index]
+  target_id        = aws_instance.master[count.index].id
   port             = 6443
 }
 
