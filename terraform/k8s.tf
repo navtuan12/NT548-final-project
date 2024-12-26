@@ -75,39 +75,6 @@ resource "aws_security_group" "open_all" {
   }
 }
 
-resource "aws_instance" "master" {
-  count         = 3
-  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
-  instance_type = "t2.medium"
-  subnet_id     = aws_subnet.private[count.index].id
-  security_groups = [aws_security_group.open_all.id]
-  private_ip    = var.master_ips[count.index]
-  user_data = file("preconfig.sh")
-  tags = {
-    Name = "master-node-${count.index + 1}"
-  }
-  root_block_device {
-    volume_size = 30 # Size in GB
-    volume_type = "gp2" # General Purpose SSD
-  }
-}
-
-resource "aws_instance" "worker" {
-  count         = 3
-  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
-  instance_type = "t2.medium"
-  subnet_id     = aws_subnet.private[count.index].id
-  security_groups = [aws_security_group.open_all.id]
-  private_ip    = var.worker_ips[count.index]
-  user_data = file("preconfig.sh")
-  tags = {
-    Name = "worker-node-${count.index + 1}"
-  }
-  root_block_device {
-    volume_size = 30 # Size in GB
-    volume_type = "gp2" # General Purpose SSD
-  }
-}
 
 resource "aws_instance" "Harbor" {
   count         = 1
@@ -129,134 +96,6 @@ resource "aws_instance" "Harbor" {
 resource "aws_eip_association" "Harbor_eip_association" {
   instance_id   = aws_instance.Harbor[0].id
   allocation_id = "eipalloc-012b20943422f5d93" # Replace with your existing EIP allocation ID
-}
-
-resource "aws_instance" "Ansible" {
-  count         = 1
-  ami           = "ami-0e2c8caa4b6378d8c" # Replace with a valid AMI ID
-  instance_type = "t2.medium"
-  subnet_id     = aws_subnet.public[count.index].id
-  security_groups = [aws_security_group.open_all.id]
-  key_name = data.aws_key_pair.keypair.key_name
-  provisioner "file" {
-    source      = "${path.module}/../ansible/"         
-    destination = "/home/ubuntu/"   
-    connection {
-      type        = "ssh"
-      host        = self.public_ip  
-      user        = "ubuntu"
-      private_key = file("${var.key_pair}")
-    }
-  }
-  user_data = file("${path.module}/../ansible/install.sh")
-  depends_on = [aws_lb.nlb, local_file.config_yaml, aws_instance.master, aws_instance.worker]
-  tags = {
-    Name = "Ansible"
-  }
-  root_block_device {
-    volume_size = 30 # Size in GB
-    volume_type = "gp2" # General Purpose SSD
-  }
-}
-
-resource "aws_lb" "nlb" {
-  name               = "nlb"
-  internal           = false
-  load_balancer_type = "network"
-  security_groups    = [aws_security_group.open_all.id]
-  subnet_mapping {
-    subnet_id = aws_subnet.public[0].id
-  }
-  subnet_mapping {
-    subnet_id = aws_subnet.public[1].id
-  }
-  subnet_mapping {
-    subnet_id = aws_subnet.public[2].id
-  }
-}
-
-resource "aws_lb_target_group" "tg" {
-  name        = "tg"
-  port        = 6443
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  health_check {
-    protocol = "TCP"
-    port     = 6443
-  }
-}
-
-resource "aws_lb_target_group_attachment" "master" {
-  count            = 3
-  target_group_arn = aws_lb_target_group.tg.arn
-  target_id        = aws_instance.master[count.index].id
-  port             = 6443
-}
-
-resource "aws_lb_listener" "listener" {
-  load_balancer_arn = aws_lb.nlb.arn
-  port              = 6443
-  protocol          = "TCP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg.arn
-  }
-}
-
-resource "aws_lb_target_group" "tg_http" {
-  name        = "tg-http"
-  port        = 30080
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  health_check {
-    protocol = "TCP"
-    port     = 30080
-  }
-}
-
-resource "aws_lb_target_group" "tg_https" {
-  name        = "tg-https"
-  port        = 30443
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  health_check {
-    protocol = "TCP"
-    port     = 30443
-  }
-}
-
-resource "aws_lb_listener" "listener_http" {
-  load_balancer_arn = aws_lb.nlb.arn
-  port              = 80
-  protocol          = "TCP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_http.arn
-  }
-}
-
-resource "aws_lb_listener" "listener_https" {
-  load_balancer_arn = aws_lb.nlb.arn
-  port              = 443
-  protocol          = "TCP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_https.arn
-  }
-}
-
-resource "aws_lb_target_group_attachment" "tg_attachment_http" {
-  count            = 3
-  target_group_arn = aws_lb_target_group.tg_http.arn
-  target_id        = aws_instance.worker[count.index].id
-  port             = 30080
-}
-
-resource "aws_lb_target_group_attachment" "tg_attachment_https" {
-  count            = 3
-  target_group_arn = aws_lb_target_group.tg_https.arn
-  target_id        = aws_instance.worker[count.index].id
-  port             = 30443
 }
 
 resource "aws_route_table" "public" {
@@ -288,46 +127,47 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "local_file" "config_yaml" {
-  content = templatefile("${path.module}/config.yml.template", {
-    nlb_domain = aws_lb.nlb.dns_name
-  })
-  filename = "${path.module}/../ansible/config.yml"
+resource "aws_eks_cluster" "demo" {
+  name     = "demo"
+  role_arn = "arn:aws:iam::439438480893:role/LabRole"
+
+  vpc_config {
+    subnet_ids = flatten([
+      # For each index from 0..2, collect both public and private subnets
+      for i in range(3) : [
+        aws_subnet.public[i].id,
+        aws_subnet.private[i].id
+      ]
+    ])
+  }
 }
 
-output "vpc_id" {
-  value = aws_vpc.main.id
-}
+resource "aws_eks_node_group" "private-nodes" {
+  cluster_name    = aws_eks_cluster.demo.name
+  node_group_name = "private-nodes"
+  node_role_arn   = "arn:aws:iam::439438480893:role/LabRole"
 
-output "public_subnets" {
-  value = aws_subnet.public[*].id
-}
+  subnet_ids = flatten([
+      # For each index from 0..2, collect both public and private subnets
+      for i in range(3) : [
+        aws_subnet.private[i].id
+      ]
+  ])
 
-output "private_subnets" {
-  value = aws_subnet.private[*].id
-}
+  capacity_type  = "ON_DEMAND"
+  instance_types = ["t3.medium"]
 
-output "nat_gateway_id" {
-  value = aws_nat_gateway.nat.id
-}
+  scaling_config {
+    desired_size = 3
+    max_size     = 5
+    min_size     = 0
+  }
 
-output "internet_gateway_id" {
-  value = aws_internet_gateway.igw.id
-}
+  update_config {
+    max_unavailable = 1
+  }
 
-output "master_instance_ids" {
-  value = aws_instance.master[*].id
+  labels = {
+    role = "general"
+  }
 }
-
-output "worker_instance_ids" {
-  value = aws_instance.worker[*].id
-}
-
-output "load_balancer_dns" {
-  value = aws_lb.nlb.dns_name
-}
-
-output "target_group_arn" {
-  value = aws_lb_target_group.tg.arn
-}
-

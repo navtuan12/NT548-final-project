@@ -3,21 +3,20 @@ kind: Deployment
 metadata:
   name: backend
   namespace: main-application
-  labels:
-    app: backend
 spec:
   selector:
     matchLabels:
       app: backend
-  replicas: 2
+  replicas: 3
   template:
     metadata:
       labels:
         app: backend
+        tier: backend
     spec:
       containers:
         - name: backend
-          image: reg.devnoneknow.online/jobseeker/job-seeker-server:6
+          image: noneknow12/job-seeker-backend:v5
           ports:
             - containerPort: 8800
           env:

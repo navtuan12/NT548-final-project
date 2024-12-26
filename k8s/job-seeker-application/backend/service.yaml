@@ -5,7 +5,8 @@ metadata:
   namespace: main-application
 spec:
   selector:
-      app: backend
+    app: backend
+    tier: backend
   ports:
     - protocol: TCP
       port: 8800
