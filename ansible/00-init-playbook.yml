@@ -1,100 +1,16 @@
-- name: Prepare Kubernetes nodes
+- name: Prepare machines for Kubernetes setup
   hosts: all
   become: yes
+
   tasks:
-    - name: Disable swap
-      command: swapoff -a
+      - name: Ensure init.sh is executable
+        file:
+          path: /home/ubuntu/init.sh
+          mode: '0755'
+          state: file
 
-    - name: Comment out swap in /etc/fstab
-      lineinfile:
-        path: /etc/fstab
-        regexp: 'swap'
-        line: '# {{ item }}'
-      with_items: "{{ lookup('file', '/etc/fstab').splitlines() }}"
-      when: item.startswith('UUID') or item.startswith('/swapfile')
-
-    - name: Load kernel modules
-      modprobe:
-        name: "{{ item }}"
-        state: present
-      with_items:
-        - overlay
-        - br_netfilter
-
-    - name: Ensure kernel modules are loaded at boot
-      copy:
-        dest: /etc/modules-load.d/k8s.conf
-        content: |
-          overlay
-          br_netfilter
-
-    - name: Set sysctl parameters for Kubernetes
-      copy:
-        dest: /etc/sysctl.d/kubernetes.conf
-        content: |
-          net.bridge.bridge-nf-call-ip6tables = 1
-          net.bridge.bridge-nf-call-iptables = 1
-          net.ipv4.ip_forward = 1
-
-    - name: Apply sysctl parameters
-      command: sysctl --system
-
-    - name: Install dependencies
-      apt:
-        name:
-          - curl
-          - gnupg2
-          - software-properties-common
-          - apt-transport-https
-          - ca-certificates
-        state: present
-        update_cache: yes
-
-    - name: Add Docker GPG key
-      command: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmour -o /etc/apt/trusted.gpg.d/containerd.gpg
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-        state: present
-
-    - name: Install containerd
-      apt:
-        name: containerd.io
-        state: present
-        update_cache: yes
-
-    - name: Configure containerd
-      command: containerd config default | tee /etc/containerd/config.toml >/dev/null 2>&1
-
-    - name: Enable SystemdCgroup in containerd config
-      replace:
-        path: /etc/containerd/config.toml
-        regexp: 'SystemdCgroup = false'
-        replace: 'SystemdCgroup = true'
-
-    - name: Restart containerd
-      systemd:
-        name: containerd
-        state: restarted
-
-    - name: Add Kubernetes GPG key
-      command: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/k8s.gpg
-
-    - name: Add Kubernetes repository
-      copy:
-        dest: /etc/apt/sources.list.d/k8s.list
-        content: 'deb [signed-by=/etc/apt/keyrings/k8s.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /'
-
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
-    - name: Install Kubernetes components
-      apt:
-        name:
-          - kubelet
-          - kubeadm
-          - kubectl
-        state: present
-        update_cache: yes
+      - name: Download and install
+        shell: sudo ./init.sh
+        args:
+          chdir: /home/ubuntu
+    

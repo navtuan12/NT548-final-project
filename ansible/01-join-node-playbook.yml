@@ -3,7 +3,7 @@
   become: yes
   tasks:
     - name: Initialize Kubernetes cluster
-      command: kubeadm init --control-plane-endpoint=${nlb_domain}
+      command: kubeadm init --control-plane-endpoint=nlb-0dede17ce3a17527.elb.us-east-1.amazonaws.com
       register: kubeadm_init_output
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
