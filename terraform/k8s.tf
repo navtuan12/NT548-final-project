@@ -4,8 +4,8 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    bucket = "nt548-tf-state"
-    key    = "vpc/nlb/terraform.tfstate"
+    bucket = "nt548-terraform-state"
+    key    = "terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -128,7 +128,7 @@ resource "aws_instance" "Harbor" {
 
 resource "aws_eip_association" "Harbor_eip_association" {
   instance_id   = aws_instance.Harbor[0].id
-  allocation_id = "eipalloc-0a056829a033c1102" # Replace with your existing EIP allocation ID
+  allocation_id = "eipalloc-012b20943422f5d93" # Replace with your existing EIP allocation ID
 }
 
 resource "aws_instance" "Ansible" {
@@ -148,7 +148,7 @@ resource "aws_instance" "Ansible" {
       private_key = file("${var.key_pair}")
     }
   }
-  #user_data = file("${path.module}/../ansible/install.sh")
+  user_data = file("${path.module}/../ansible/install.sh")
   depends_on = [aws_lb.nlb, local_file.config_yaml, aws_instance.master, aws_instance.worker]
   tags = {
     Name = "Ansible"
